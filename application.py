@@ -8,6 +8,8 @@ from io import BytesIO
 import os
 import uuid
 import base64
+import time
+from datetime import datetime
 from lime import lime_image
 from skimage.segmentation import mark_boundaries
 
@@ -21,6 +23,7 @@ application.secret_key = 'your_secret_key_here'  # Replace with a secure key
 model_path = 'models/My_custom_resnet_model_BGD.keras'  # Update with your model path
 model = tf.keras.models.load_model(model_path)
 
+analysis_summaries = []
 # Allowed file types
 ALLOWED_FILETYPES = set(['.jpg', '.jpeg', '.gif', '.png', '.bmp'])
 
@@ -39,8 +42,47 @@ class_dictionary = {
 # Image dimensions (update to match your model's input size)
 IMG_HEIGHT, IMG_WIDTH = 64, 64
 
+# Model map for selections
+model_map = {
+    'model1': 'models/My_low_acc_model_BGD.keras',
+    'model2': 'models/My_high_acc_model_BGD.keras',
+    'model3': 'models/My_custom_resnet_model_BGD.keras'
+}
+
+# Resize image based on model
+model_input_sizes = {
+    'model1': (128, 128),
+    'model2': (128, 128),
+    'model3': (128, 128),
+    'hybrid': (128, 128)  # Default size for hybrid (optional override below)
+}
+
 # LIME Image Explainer setup
 explainer = lime_image.LimeImageExplainer()
+
+# Image classification with model choice
+def classify_with_model(image_path, model_path, input_size):
+    try:
+        print(f"[INFO] Loading model from: {model_path}")
+        img = Image.open(image_path).convert('RGB')
+        img = img.resize(input_size)
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0
+
+        model = tf.keras.models.load_model(model_path)
+        probs = model.predict(img_array)
+
+        if probs.shape[1] != len(class_dictionary):
+            raise ValueError(f"Model output shape {probs.shape} does not match class dictionary ({len(class_dictionary)} classes).")
+
+        pred = np.argmax(probs, axis=1)[0]
+        conf = probs[0, pred]
+        return class_dictionary[pred], conf, img_array[0]
+
+    except Exception as e:
+        print(f"[ERROR] classify_with_model failed: {e}")
+        return None, None, None
 
 # Image preprocessing and classification functions
 def classify_image(image_path):
@@ -102,16 +144,19 @@ def generate_lime_overlay(image_array):
 @application.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        if 'blood_image' not in request.files:
-            flash('No file uploaded.')
+        start_time = time.time()
+        
+        if 'blood_image' not in request.files or 'model_name' not in request.form:
+            flash('Missing file or model selection.')
             return redirect(url_for('index'))
 
         file = request.files['blood_image']
+        model_name = request.form['model_name']
+        
         if file.filename == '':
             flash('No file selected to upload.')
             return redirect(url_for('index'))
 
-        # Secure filename and check extension
         sec_filename = secure_filename(file.filename)
         file_extension = os.path.splitext(sec_filename)[1].lower()
 
@@ -120,30 +165,66 @@ def index():
             image_path = './uploads/' + file_tempname + file_extension
             file.save(image_path)
 
-            # Classify the image
-            label, prediction_probability, img_array = classify_image(image_path)
+            # Classify image with selected model
+            input_size = model_input_sizes.get(model_name, (64, 64))  # Default fallback
+
+            if model_name != 'hybrid':
+                model_path = model_map.get(model_name)
+                label, prediction_probability, img_array = classify_with_model(image_path, model_path, input_size)
+            else:
+                # Hybrid: average prediction
+                predictions = []
+                probs = []
+                for key, path in model_map.items():
+                    label_i, conf_i, _ = classify_with_model(image_path, path)
+                    if label_i is not None:
+                        predictions.append(label_i)
+                        probs.append(conf_i)
+    
+                if predictions:
+                    # Pick the label that appeared most often
+                    label = max(set(predictions), key=predictions.count)
+                    prediction_probability = round(np.mean(probs), 4)
+                    img_array = image.img_to_array(Image.open(image_path).resize((IMG_HEIGHT, IMG_WIDTH))) / 255.0
+                else:
+                    label, prediction_probability, img_array = None, None, None
+            
             prediction_probability = np.around(prediction_probability, decimals=4)
 
-            # Generate LIME explanation overlay
             lime_overlay = generate_lime_overlay(img_array)
-
-            # Create the base64-encoded image thumbnail
             orig_image = Image.open(image_path)
             image_data = get_image_thumbnail(orig_image)
 
-            # Convert LIME overlay to base64 for displaying on the frontend
             lime_overlay_image = Image.fromarray((lime_overlay * 255).astype(np.uint8))
             with BytesIO() as buffer:
                 lime_overlay_image.save(buffer, 'PNG')
                 lime_overlay_base64 = base64.b64encode(buffer.getvalue()).decode()
 
-            return render_template('index.html', label=label, prob=prediction_probability, image=image_data, lime_overlay=lime_overlay_base64)
+            time_submitted = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            time_taken = round(time.time() - start_time, 2)
 
+            result_row = {
+                'time_submitted': time_submitted,
+                'time_taken': time_taken,
+                'image': image_data,
+                'model_used': model_name,
+                'label': label,
+                'confidence': prediction_probability
+            }
+
+            analysis_summaries.append(result_row)
+            # Sort summaries by time submitted (latest first)
+            analysis_summaries.sort(key=lambda x: x['time_submitted'], reverse=True)
+
+            return render_template('index.html', label=label, prob=prediction_probability,
+                       image=image_data, lime_overlay=lime_overlay_base64,
+                       result_table=analysis_summaries)
         else:
             flash(f"Invalid file type: {file_extension}. Only .jpg, .jpeg, .gif, .png, .bmp are allowed.")
             return redirect(url_for('index'))
 
-    return render_template('index.html')
+    return render_template('index.html',result_table=analysis_summaries)
+
 
 # Handle 'filesize too large' errors
 @application.errorhandler(413)
