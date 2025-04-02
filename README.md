@@ -22,7 +22,12 @@ python -m venv myenv  # Replace with the path to the compatible Python version
 .\myenv\Scripts\activate
 
 5. Install dependencies to virtual environment
-pip install flask tensorflow pillow werkzeug
+pip install flask tensorflow pillow werkzeug  lime
 
 6. Run the python app
 python application.py
+
+link to access the application after run
+http://127.0.0.1:5000
+
+

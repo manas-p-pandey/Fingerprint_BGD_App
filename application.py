@@ -72,8 +72,9 @@ def classify_image(image_path):
         inID = class_predicted[0]
 
         # Invert the class dictionary to get the label for the predicted class
-        inv_map = {v: k for k, v in class_dictionary.items()}
-        label = inv_map.get(inID, "Unknown")  # Get the label from the dictionary
+        #inv_map = {v: k for k, v in class_dictionary.items()}
+        #label = inv_map.get(inID, "Unknown")  # Get the label from the dictionary
+        label = class_dictionary[inID]
 
         print("[Info] Predicted: {}, Confidence: {}".format(label, prediction_probability))
         
