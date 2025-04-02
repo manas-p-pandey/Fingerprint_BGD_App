@@ -31,3 +31,13 @@ link to access the application after run
 http://127.0.0.1:5000
 
 
+---------------------------
+Run with Docker
+---------------------------
+
+# Build the Docker image
+docker build -t my-fbgd-app .
+
+# Run the Docker container
+docker run --name My-FingerPrint-BloodGroupDetection -p 5000:5000 my-fbgd-app
+
