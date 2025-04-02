@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Group Detection using Fingerprints</title>
+    <style>
+        /* Ensure the page takes full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h3 {
+            margin-top: 0;
+        }
+
+        .container {
+            flex: 1;  /* This ensures that container takes up the remaining space */
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+
+        .form-container {
+            background-color: white;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .form-container label {
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .form-container input[type="file"] {
+            padding: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .form-container input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .form-container input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .results-container {
+            margin-top: 30px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-container h3 {
+            margin-top: 0;
+        }
+
+        .results-container p {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .image-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .lime-overlay-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .lime-overlay-container img {
+            max-width: 100%;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        footer {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-top: auto;  /* Push the footer to the bottom */
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .image-container {
+                grid-template-columns: 1fr;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h3>Blood Group Detection using Fingerprints</h3>
+</header>
+
+<div class="container">
+    <!-- Form to upload an image -->
+    <div class="form-container">
+        <form action="/" method="post" enctype="multipart/form-data">
+            <label for="blood_image">Select a fingerprint image to upload <small>(Supports .jpg, .jpeg, .gif, .png, .bmp images.)</small></label>
+            <input type="file" name="blood_image" id="blood_image" accept=".jpg,.jpeg,.gif,.png,.bmp" required="required">
+            <input type="submit" value="Process" name="submit">
+        </form>
+    </div>
+
+    {% if label %}
+    <!-- Results Section -->
+    <div class="results-container">
+        <h3>Prediction Result</h3>
+        <p>Predicted Blood Group: {{ label }}</p>
+        <p>Confidence: {{ prob }}%</p>
+    </div>
+
+    <!-- Images Section -->
+    <div class="image-container">
+        <!-- Original Image -->
+        <div>
+            <h4>Original Image</h4>
+            <img src="data:image/jpeg;base64,{{ image }}" alt="Original uploaded image">
+        </div>
+
+        <!-- Image with LIME Overlay -->
+        <div>
+            <h4>Image with LIME Overlay</h4>
+            {% if lime_overlay %}
+            <div class="lime-overlay-container">
+                <img src="data:image/png;base64,{{ lime_overlay }}" alt="LIME overlay">
+            </div>
+            {% else %}
+            <p>LIME explanation is not available for this image.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<footer>
+    <p>This is a Demo work by Manas Prasun Pandey for Deep Learning Applications for M. Sc. Data Science &copy; University of Roehampton</p>
+</footer>
+
+</body>
+</html>
