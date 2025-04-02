@@ -141,6 +141,15 @@
         <form id="upload-form" action="/" method="post" enctype="multipart/form-data">
             <label for="blood_image">Select a fingerprint image to upload <small>(Supports .jpg, .jpeg, .gif, .png, .bmp images.)</small></label>
             <input type="file" name="blood_image" id="blood_image" accept=".jpg,.jpeg,.gif,.png,.bmp" required="required">
+        
+            <label for="model">Select a Model</label>
+            <select name="model_name" id="model" required>
+                <option value="model1">Low Accuracy Model</option>
+                <option value="model2">High Accuracy Model</option>
+                <option value="model3">Custom ResNet Model</option>
+                <option value="hybrid">Hybrid (All Models)</option>
+            </select>
+        
             <input type="submit" value="Process" name="submit">
         </form>
     </div>
@@ -181,7 +190,35 @@
     {% endif %}
     
 </div>
+{% if result_table %}
+<div class="results-container">
+    <h3 style="cursor: pointer;" onclick="toggleSummary()">▶ Analysis Summary</h3>
+    <div id="summary-table-container" style="display: none; max-height: 300px; overflow-y: auto; border: 1px solid #ccc;">
 
+        <table border="1" cellpadding="10" cellspacing="0" width="100%">
+            <tr>
+                <th>Time Submitted</th>
+                <th>Time Taken (s)</th>
+                <th>Image</th>
+                <th>Model Used</th>
+                <th>Label</th>
+                <th>Confidence</th>
+            </tr>
+            {% for row in result_table %}
+            <tr>
+                <td>{{ row.time_submitted }}</td>
+                <td>{{ row.time_taken }}</td>
+                <td><img src="data:image/jpeg;base64,{{ row.image }}" width="64" height="64"></td>
+                <td>{{ row.model_used }}</td>
+                <td>{{ row.label }}</td>
+                <td>{{ row.confidence * 100 }}%</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+    </div>
+</div>
+{% endif %}
 <footer>
     <p>This is a Demo work by Manas Prasun Pandey for Deep Learning Applications for M. Sc. Data Science &copy; University of Roehampton</p>
 </footer>
@@ -200,6 +237,17 @@
             });
         spinner.style.display = "none";
     });
+    function toggleSummary() {
+        const container = document.getElementById("summary-table-container");
+        const header = document.querySelector(".results-container h3");
+        if (container.style.display === "none") {
+            container.style.display = "block";
+            header.innerHTML = "▼ Analysis Summary";
+        } else {
+            container.style.display = "none";
+            header.innerHTML = "▶ Analysis Summary";
+        }
+    }
 </script>
 </body>
 </html>
