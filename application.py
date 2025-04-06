@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 from lime import lime_image
 from skimage.segmentation import mark_boundaries
+from flask import jsonify
 
 # Initialize Flask app
 application = Flask(__name__)
@@ -40,7 +41,7 @@ class_dictionary = {
 }
 
 # Image dimensions (update to match your model's input size)
-IMG_HEIGHT, IMG_WIDTH = 64, 64
+IMG_HEIGHT, IMG_WIDTH = 128, 128
 
 # Model map for selections
 model_map = {
@@ -166,10 +167,11 @@ def index():
             file.save(image_path)
 
             # Classify image with selected model
-            input_size = model_input_sizes.get(model_name, (64, 64))  # Default fallback
+            input_size = model_input_sizes.get(model_name, (128, 128))  # Default fallback
 
             if model_name != 'hybrid':
                 model_path = model_map.get(model_name)
+                input_size = model_input_sizes.get(model_name, (128, 128))
                 label, prediction_probability, img_array = classify_with_model(image_path, model_path, input_size)
             else:
                 # Hybrid: average prediction
@@ -191,14 +193,14 @@ def index():
             
             prediction_probability = np.around(prediction_probability, decimals=4)
 
-            lime_overlay = generate_lime_overlay(img_array)
+            #lime_overlay = generate_lime_overlay(img_array)
             orig_image = Image.open(image_path)
             image_data = get_image_thumbnail(orig_image)
 
-            lime_overlay_image = Image.fromarray((lime_overlay * 255).astype(np.uint8))
-            with BytesIO() as buffer:
-                lime_overlay_image.save(buffer, 'PNG')
-                lime_overlay_base64 = base64.b64encode(buffer.getvalue()).decode()
+            #lime_overlay_image = Image.fromarray((lime_overlay * 255).astype(np.uint8))
+            #with BytesIO() as buffer:
+            #    lime_overlay_image.save(buffer, 'PNG')
+            #    lime_overlay_base64 = base64.b64encode(buffer.getvalue()).decode()
 
             time_submitted = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             time_taken = round(time.time() - start_time, 2)
@@ -217,7 +219,7 @@ def index():
             analysis_summaries.sort(key=lambda x: x['time_submitted'], reverse=True)
 
             return render_template('index.html', label=label, prob=prediction_probability,
-                       image=image_data, lime_overlay=lime_overlay_base64,
+                       image=image_data,
                        result_table=analysis_summaries)
         else:
             flash(f"Invalid file type: {file_extension}. Only .jpg, .jpeg, .gif, .png, .bmp are allowed.")
@@ -225,6 +227,32 @@ def index():
 
     return render_template('index.html',result_table=analysis_summaries)
 
+
+@application.route('/explain', methods=['POST'])
+def explain_lime():
+    try:
+        if not analysis_summaries:
+            return jsonify({'success': False, 'error': 'No prediction available to explain.'})
+
+        last_entry = analysis_summaries[0]
+        image_data = last_entry['image']
+
+        image_bytes = base64.b64decode(image_data)
+        image_pil = Image.open(BytesIO(image_bytes)).resize((IMG_HEIGHT, IMG_WIDTH))
+        img_array = image.img_to_array(image_pil) / 255.0
+
+        lime_overlay = generate_lime_overlay(img_array)
+        lime_overlay_image = Image.fromarray((lime_overlay * 255).astype(np.uint8))
+
+        with BytesIO() as buffer:
+            lime_overlay_image.save(buffer, 'PNG')
+            lime_overlay_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+        return jsonify({'success': True, 'lime_overlay': lime_overlay_base64})
+
+    except Exception as e:
+        print(f"[ERROR] explain_lime: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 # Handle 'filesize too large' errors
 @application.errorhandler(413)
