@@ -14,15 +14,16 @@ from lime import lime_image
 from skimage.segmentation import mark_boundaries
 from flask import jsonify
 
+
 # Initialize Flask app
 application = Flask(__name__)
 
 # Set secret key for session management
-application.secret_key = 'your_secret_key_here'  # Replace with a secure key
+application.secret_key = 'manas123xyz'  # Replace with a secure key
 
 # Path and model setup
-model_path = 'models/My_custom_resnet_model_BGD.keras'  # Update with your model path
-model = tf.keras.models.load_model(model_path)
+model_path = ''  # Update with your model path
+model = None
 
 analysis_summaries = []
 # Allowed file types
@@ -262,6 +263,35 @@ def http_413(e):
     flash('Uploaded file too large.')
     return redirect(url_for('index'))
 
+def download_models_if_missing():
+    import requests
+
+    base_github_url = "https://github.com/manas-p-pandey/Fingerprint_BGD_Models/raw/refs/heads/main/"
+    model_filenames = [
+        'My_low_acc_model_BGD.keras',
+        'My_high_acc_model_BGD.keras',
+        'My_custom_resnet_model_BGD.keras'
+    ]
+
+    os.makedirs('models', exist_ok=True)
+
+    for filename in model_filenames:
+        local_path = os.path.join('models', filename)
+        if not os.path.exists(local_path):
+            url = base_github_url + filename
+            print(f"[INFO] Downloading {filename} from {url}")
+            response = requests.get(url)
+            if response.status_code == 200:
+                with open(local_path, 'wb') as f:
+                    f.write(response.content)
+                print(f"[INFO] Saved to {local_path}")
+            else:
+                print(f"[ERROR] Failed to download {filename}: HTTP {response.status_code}")
+
+
 # Run the Flask application
 if __name__ == "__main__":
+    download_models_if_missing()
+    model_path = 'models/My_custom_resnet_model_BGD.keras'
+    model = tf.keras.models.load_model(model_path)
     application.run(host='0.0.0.0', port=5000, debug=True)
