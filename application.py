@@ -178,7 +178,8 @@ def index():
                 predictions = []
                 probs = []
                 for key, path in model_map.items():
-                    label_i, conf_i, _ = classify_with_model(image_path, path)
+                    input_size = model_input_sizes.get(model_name, (128, 128))
+                    label_i, conf_i, _ = classify_with_model(image_path, path, input_size)
                     if label_i is not None:
                         predictions.append(label_i)
                         probs.append(conf_i)
