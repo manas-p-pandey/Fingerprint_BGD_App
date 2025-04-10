@@ -25,7 +25,7 @@ pip install -r requirements.txt
 python application.py
 
 link to access the application after run
-http://127.0.0.1:5000
+http://localhost:5000
 
 
 ---------------------------
