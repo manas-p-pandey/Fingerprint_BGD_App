@@ -39,5 +39,5 @@ docker build -t my-fbgd-app .
 docker run --name My-FingerPrint-BloodGroupDetection -p 5000:5000 my-fbgd-app
 
 link to access the application after run
-http://127.0.0.1:5000
+http://localhost:5000
 
