@@ -287,6 +287,8 @@ def download_models_if_missing():
                 print(f"[INFO] Saved to {local_path}")
             else:
                 print(f"[ERROR] Failed to download {filename}: HTTP {response.status_code}")
+    
+    os.makedirs('uploads', exist_ok=True)
 
 
 # Run the Flask application
